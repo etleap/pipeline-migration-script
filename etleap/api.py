@@ -1,11 +1,12 @@
 import requests as r
+from requests.auth import HTTPBasicAuth
 
 BASE_URL = "https://api.etleap.com/api/v2"
 
 class EtleapApi:
 
     def __init__(self, access_key, secret_key, base_url = BASE_URL):
-        self.auth = (access_key, secret_key)
+        self.auth = access_key, secret_key
         self.base_url = base_url
 
     def get_pipelines(self):
@@ -56,9 +57,11 @@ class EtleapApi:
         post_resp = r.post(self.base_url + '/pipelines', auth=self.auth, json=pipeline.toJSON())
         if (post_resp.status_code != 200):
             raise EtleapApiException("Error creating pipeline " + pipeline.id + ": " + post_resp.text)
+        else: 
+            print("Created pipeline:", pipeline.name)
 
 class Pipeline:
-
+    
     def __init__(self, api, resp):
         self.id = resp['id']
         self.api = api
@@ -67,7 +70,7 @@ class Pipeline:
         self.destination = resp['destinations'][0]['destination']
         self.latest_script_version = resp['latestScriptVersion']
         self.paused = resp['paused']
-        self.parsing_error_settings = resp['parsingErrorSettings']
+        self.parsing_error_settings = resp.get('parsingErrorSettings', {}) # Address issue where parsingErrorSettings may not be present
         self.script = None
 
     def get_source_connection_id(self):
