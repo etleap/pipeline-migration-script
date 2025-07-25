@@ -4,15 +4,15 @@ from etleap.api import EtleapApi, EtleapApiException
 # This is where pipelines will be migrated from
 
 env1_base_url = "https://api.etleap.com/api/v2"
-env1_etleap_access_key = 'JBiX68sKOzX8rVBe1RVJ'
-env1_etleap_secret_key = '8dOMw1eyVEigBEWDaamaF2oosd93JTGCSqjLut3p'
+env1_etleap_access_key = '<add here>'
+env1_etleap_secret_key = '<add here>'
 
 # env2 API credentials
 # This is where pipelines will be migrated to
 
 env2_base_url = "https://api.etleap.com/api/v2"
-env2_etleap_access_key = 'Fjvi5mTXNUniheUdR0cv'
-env2_etleap_secret_key = '9bO661NHW9XQh6s8ciRQR6usC4KQdNaCoXxwAbac'
+env2_etleap_access_key = '<add here>'
+env2_etleap_secret_key = '<add here>'
 
 
 # Maps a connection from the env1 to env2
@@ -20,9 +20,8 @@ env2_etleap_secret_key = '9bO661NHW9XQh6s8ciRQR6usC4KQdNaCoXxwAbac'
 # If a pipeline has a connection (source or destination) that is not in this map, it will be skipped
 
 connection_map = {
-    'P1dpgFHW': 'IH7pqqva', # mk google sheets
-    'W5sF4wMb': 'ZiaMcErq', # mk redshift 
-    'V1UslrMt': 'ZiaMcErq' # mk redshift
+    'env1_connection1': 'env2_connection1', 
+    'env1_connection2': 'env2_connection12'
 }
 
 # Any pipelines included in this array will attempt to be migrated
@@ -36,8 +35,9 @@ pipeline_ids_to_migrate = [
 # Only use this if you are doing a bulk migration for this connection
 
 sources_to_migrate = [
-    'P1dpgFHW' 
-]
+    # 'source_connection_id_1', 
+    # 'source_connection_id_2'
+    ]
 
 # -------------------------------------------
 # ------- DO NOT EDIT BELOW THIS LINE -------
