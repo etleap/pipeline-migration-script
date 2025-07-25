@@ -29,15 +29,14 @@ connection_map = {
 pipeline_ids_to_migrate = [
     # 'pipeline_id_1',
     # 'pipeline_id_2'
-    ]
-
+]
 # Any pipelines that ingest from sources in this list will attempt to be migrated
 # Use this if you are doing a bulk migration for all pipelines from this connection
 
 sources_to_migrate = [
     # 'source_connection_id_1', 
     # 'source_connection_id_2'
-    ]
+]
 
 # -------------------------------------------
 # ------- DO NOT EDIT BELOW THIS LINE -------
@@ -58,8 +57,12 @@ from_env1 = [
 for p in from_env1:
     if (p.destination['connectionId'] in connection_map.keys()):
         p.destination['connectionId'] = connection_map[p.destination['connectionId']]
+    else: 
+        raise EtleapApiException(f"Pipeline \"{p.name}\" has a destination connection not in the connection map: {p.destination['connectionId']}")  
     if (p.source['connectionId'] in connection_map.keys()):
-         p.source['connectionId'] = connection_map[p.source['connectionId']]
+        p.source['connectionId'] = connection_map[p.source['connectionId']]
+    else: 
+        raise EtleapApiException(f"Pipeline \"{p.name}\" has a destination connection not in the connection map: {p.source['connectionId']}")  
 
 
 print(f"\n{len(from_env1)} pipeline(s) to be created in the target environment:")
