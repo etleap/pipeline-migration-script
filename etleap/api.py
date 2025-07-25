@@ -1,12 +1,11 @@
 import requests as r
-from requests.auth import HTTPBasicAuth
 
 BASE_URL = "https://api.etleap.com/api/v2"
 
 class EtleapApi:
 
     def __init__(self, access_key, secret_key, base_url = BASE_URL):
-        self.auth = access_key, secret_key
+        self.auth = (access_key, secret_key)
         self.base_url = base_url
 
     def get_pipelines(self):
