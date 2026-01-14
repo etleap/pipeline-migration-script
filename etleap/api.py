@@ -39,9 +39,10 @@ class EtleapApi:
 
         return script_resp.json()
 
-    def create_pipeline(self, pipeline):
+    def create_pipeline(self, pipeline, pipeline_name_suffix=None):
+        name = pipeline.name + pipeline_name_suffix if pipeline_name_suffix else pipeline.name
         body = {
-            'name': pipeline.name,
+            'name': name,
             'source': pipeline.source,
             'destination': pipeline.destination,
             'script': pipeline.script,

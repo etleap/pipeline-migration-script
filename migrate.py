@@ -35,9 +35,15 @@ pipeline_ids_to_migrate = [
 # Use this if you are doing a bulk migration for all pipelines from this connection
 
 sources_to_migrate = [
-    # 'source_connection_id_1', 
+    # 'source_connection_id_1',
     # 'source_connection_id_2'
 ]
+
+# Optional: A suffix to append to pipeline names in the target environment
+# If you are doing a migration within the same org, this should be used to avoid name conflicts
+# Leave as None or empty string to keep original names
+
+pipeline_name_suffix = None  # e.g., '_migrated' or ' (copy)'
 
 # -------------------------------------------
 # ------- DO NOT EDIT BELOW THIS LINE -------
@@ -77,8 +83,8 @@ if proceed != 'y':
 
 env2_client = EtleapApi(env2_etleap_access_key, env2_etleap_secret_key, env2_base_url)
 
-try: 
+try:
     for p in from_env1:
-        env2_client.create_pipeline(p)
+        env2_client.create_pipeline(p, pipeline_name_suffix)
 except EtleapApiException as e:
     print(e.error_text)
