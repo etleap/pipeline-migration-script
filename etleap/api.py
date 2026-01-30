@@ -9,8 +9,6 @@ class EtleapApi:
         self.base_url = base_url
 
     def get_pipelines(self):
-        print(self.auth)
-        print(self.base_url)
         all_pipelines_resp = r.get(self.base_url + "/pipelines?pageSize=0", auth=self.auth)
 
         if (all_pipelines_resp.status_code != 200):
@@ -44,7 +42,8 @@ class EtleapApi:
     def create_pipeline(self, pipeline, pipeline_name_suffix=None):
         if pipeline_name_suffix:
             pipeline.name = pipeline.name + pipeline_name_suffix
-
+            
+        '''
         body = {
             'name': pipeline.name,
             'source': pipeline.source,
@@ -56,9 +55,8 @@ class EtleapApi:
                 'threshold': 0,
                 'action': 'NOTIFY'
             }
-        }       
-        
-
+        }
+        '''
 
         post_resp = r.post(self.base_url + '/pipelines', auth=self.auth, json=pipeline.toJSON())
         if (post_resp.status_code != 200):

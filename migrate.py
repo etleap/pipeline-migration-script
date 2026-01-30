@@ -4,16 +4,16 @@ from etleap.api import EtleapApi, EtleapApiException
 # This is where pipelines will be migrated from
 
 env1_base_url = "https://api.etleap.com/api/v2"
-env1_etleap_access_key = 'access_key'
-env1_etleap_secret_key = 'secret_key'
+env1_etleap_access_key = '<api_access_key>'
+env1_etleap_secret_key = '<api_secret_key>'
 
 # Maps a connection from the env1 to env2
 # Update this as needed in the form of 'env1_connection_id': 'env2_connection_id'
 # If a pipeline has a connection (source or destination) that is not in this map, it will be skipped
 
 connection_map = {
-    'connection1_old':'connection1_new', # source connection (repeat for each) 
-    'connection2_old':'connection2_new'  # destination connection
+    '<postgres_uuid1>':'<postgres_uuid1>', # source connection (repeat for each) 
+    '<old_snowflake_uuid>':'<new_snowflake_uuid>'  # destination connection (must point at a new destination or there will be table name conflicts)
 }
 # Any pipelines included in this array will attempt to be migrated
 
@@ -26,8 +26,8 @@ pipeline_ids_to_migrate = [
 # Use this if you are doing a bulk migration for all pipelines from this connection
 
 sources_to_migrate = [
-    # 'source_connection_id1',
-    # 'source_connection_id2'
+    '<postgres_uuid1>',
+    '<postgres_uuid2>'
 ] 
 
 # A suffix to append to pipeline names in the target environment
