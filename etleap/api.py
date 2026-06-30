@@ -33,14 +33,14 @@ class EtleapApi:
 
     def rename_pipeline(self, pipeline, new_name, new_table=None):
         updates = {'name': new_name}
-        if new_table and pipeline.destinations_raw:
-            updated_destinations = []
-            for dest in pipeline.destinations_raw:
-                d = dict(dest)
-                d['destination'] = dict(d['destination'])
-                d['destination']['table'] = new_table
-                updated_destinations.append(d)
-            updates['destination'] = updated_destinations
+        if new_table:
+            # PipelineUpdate.destination expects an array of flat DestinationUpdate
+            # objects (connectionId required), not the nested {destination: {...}}
+            # shape returned by GET, and rejects unrecognized properties.
+            updates['destination'] = [
+                {'connectionId': dest['destination']['connectionId'], 'table': new_table}
+                for dest in pipeline.destinations_raw
+            ]
         resp = r.patch(self.base_url + '/pipelines/' + pipeline.id, auth=self.auth, json=updates)
         if resp.status_code != 200:
             raise EtleapApiException("Error renaming pipeline \"" + pipeline.name + "\": " + resp.text)

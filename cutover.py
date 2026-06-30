@@ -1,3 +1,4 @@
+import time
 from etleap.api import EtleapApi, EtleapApiException
 
 # ============================================================
@@ -60,11 +61,18 @@ if not pairs:
     print("\n  No complete pairs found. Aborting.")
     exit(0)
 
+def fmt_table(dest):
+    schema = dest.get('schema', '')
+    table = dest.get('table', '')
+    return f"{schema}.{table}" if schema else table
+
 print(f"\n  {len(pairs)} pipeline pair(s) ready for cutover:")
 for original, cloned in pairs:
     orig_table = original.destination.get('table', '')
-    print(f"    {original.name!r} ({orig_table})  →  {original.name + old_suffix!r} ({orig_table + old_suffix})")
-    print(f"    {cloned.name!r} ({cloned.destination.get('table', '')})  →  {original.name!r} ({orig_table})")
+    orig_fmt = fmt_table(original.destination)
+    cloned_fmt = fmt_table(cloned.destination)
+    print(f"    {original.name!r} ({orig_fmt})  →  {original.name + old_suffix!r} ({orig_fmt + old_suffix})")
+    print(f"    {cloned.name!r} ({cloned_fmt})  →  {original.name!r} ({orig_fmt})")
     print()
 
 proceed = input("Proceed with cutover? (y/n): ").strip().lower()
@@ -72,17 +80,46 @@ if proceed != 'y':
     print("Aborted.")
     exit(0)
 
+def wait_for_rename(pipeline_id, label, expected_name, expected_table, poll_interval=5, timeout=300):
+    elapsed = 0
+    while elapsed < timeout:
+        details = client.get_pipeline_details(pipeline_id)
+        dest = details['destinations'][0]['destination']
+        changing_to = dest.get('tableChangingTo')
+        if not changing_to:
+            actual_name = details.get('name')
+            actual_table = dest.get('table', '')
+            if actual_name != expected_name or actual_table != expected_table:
+                raise EtleapApiException(
+                    f"Rename for \"{label}\" did not complete as expected: "
+                    f"name={actual_name!r} (expected {expected_name!r}), "
+                    f"table={actual_table!r} (expected {expected_table!r})"
+                )
+            print(f"    Confirmed: now \"{actual_name}\" ({actual_table})")
+            return
+        print(f"    Waiting for table rename to complete (tableChangingTo: {changing_to})...")
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+    raise EtleapApiException(f"Timed out waiting for table rename on \"{label}\" after {timeout}s")
+
 print()
 completed = 0
 try:
     for original, cloned in pairs:
         orig_table = original.destination.get('table', '')
+        orig_fmt = fmt_table(original.destination)
+        cloned_fmt = fmt_table(cloned.destination)
+        old_table_fmt = orig_fmt + old_suffix if orig_table else orig_fmt
 
-        print(f"  [{completed + 1}/{len(pairs)}] Renaming \"{original.name}\" → \"{original.name + old_suffix}\"...")
-        client.rename_pipeline(original, original.name + old_suffix, orig_table + old_suffix if orig_table else None)
+        old_name = original.name + old_suffix
+        old_table = orig_table + old_suffix if orig_table else orig_table
+        print(f"  [{completed + 1}/{len(pairs)}] Renaming \"{original.name}\" → \"{old_name}\"  ({orig_fmt} → {old_table_fmt})...")
+        client.rename_pipeline(original, old_name, old_table)
+        wait_for_rename(original.id, original.name, old_name, old_table)
 
-        print(f"  [{completed + 1}/{len(pairs)}] Renaming \"{cloned.name}\" → \"{original.name}\"...")
-        client.rename_pipeline(cloned, original.name, orig_table if orig_table else None)
+        print(f"  [{completed + 1}/{len(pairs)}] Renaming \"{cloned.name}\" → \"{original.name}\"  ({cloned_fmt} → {orig_fmt})...")
+        client.rename_pipeline(cloned, original.name, orig_table)
+        wait_for_rename(cloned.id, cloned.name, original.name, orig_table)
 
         completed += 1
 except EtleapApiException as e:
