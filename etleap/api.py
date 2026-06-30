@@ -31,6 +31,20 @@ class EtleapApi:
 
         return script_resp.json()
 
+    def rename_pipeline(self, pipeline, new_name, new_table=None):
+        updates = {'name': new_name}
+        if new_table and pipeline.destinations_raw:
+            updated_destinations = []
+            for dest in pipeline.destinations_raw:
+                d = dict(dest)
+                d['destination'] = dict(d['destination'])
+                d['destination']['table'] = new_table
+                updated_destinations.append(d)
+            updates['destination'] = updated_destinations
+        resp = r.patch(self.base_url + '/pipelines/' + pipeline.id, auth=self.auth, json=updates)
+        if resp.status_code != 200:
+            raise EtleapApiException("Error renaming pipeline \"" + pipeline.name + "\": " + resp.text)
+
     def create_pipeline(self, pipeline, pipeline_name_suffix=None):
         name = pipeline.name + pipeline_name_suffix if pipeline_name_suffix else pipeline.name
         destination = dict(pipeline.destination)
@@ -55,6 +69,7 @@ class Pipeline:
         self.api = api
         self.name = resp['name']
         self.source = resp['source']
+        self.destinations_raw = resp['destinations']
         self.destination = resp['destinations'][0]['destination']
         self.latest_script_version = resp['latestScriptVersion']
         self.paused = resp['paused']
