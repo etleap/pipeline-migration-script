@@ -1,37 +1,36 @@
 from etleap.api import EtleapApi, EtleapApiException
 
-# env1 API credentials
-# This is where pipelines will be migrated from
+# API credentials
 
-env1_base_url = "https://api.etleap.com/api/v2"
-env1_etleap_access_key = '<api_access_key>'
-env1_etleap_secret_key = '<api_secret_key>'
+base_url = "https://api.etleap.com/api/v2"
+etleap_access_key = '<api_access_key>'
+etleap_secret_key = '<api_secret_key>'
 
-# Maps a connection from the env1 to env2
-# Update this as needed in the form of 'env1_connection_id': 'env2_connection_id'
-# If a pipeline has a connection (source or destination) that is not in this map, it will be skipped
+# Maps each current connection to the connection the copied pipelines should use
+# Update this as needed in the form of 'current_connection_id': 'new_connection_id'
+# Every pipeline being copied must have both its source and destination connection in this map, otherwise the script stops with an error
 
 connection_map = {
-    '<postgres_uuid1>':'<postgres_uuid1>', # source connection (repeat for each) 
-    '<old_snowflake_uuid>':'<new_snowflake_uuid>'  # destination connection (must point at a new destination or there will be table name conflicts)
+    '<current_source_connection_id>': '<new_source_connection_id>',  # source connection (repeat for each)
+    '<current_destination_connection_id>': '<new_destination_connection_id>'  # destination connection (must point at a new destination or there will be table name conflicts)
 }
-# Any pipelines included in this array will attempt to be migrated
+# Any pipelines included in this array will be copied
 
 pipeline_ids_to_migrate = [
     # 'pipeline_id1',
     # 'pipeline_id2'
 ]
 
-# Any pipelines that ingest from sources in this list will attempt to be migrated
-# Use this if you are doing a bulk migration for all pipelines from this connection
+# Any pipelines that ingest from sources in this list will be copied
+# Use this if you are copying all pipelines from a source connection
 
 sources_to_migrate = [
-    '<postgres_uuid1>',
-    '<postgres_uuid2>'
-] 
+    # 'source_connection_id1',
+    # 'source_connection_id2'
+]
 
-# A suffix to append to pipeline names in the target environment
-# If you are doing a migration within the same org, this should be used to avoid name conflicts
+# A suffix to append to the names of the copied pipelines
+# This should be used to avoid name conflicts with the original pipelines
 # Leave as None or empty string to keep original names
 
 pipeline_name_suffix =  ' - New'  # e.g., '_migrated' or ' (copy)'
@@ -40,11 +39,11 @@ pipeline_name_suffix =  ' - New'  # e.g., '_migrated' or ' (copy)'
 # ------- DO NOT EDIT BELOW THIS LINE -------
 # -------------------------------------------
 
-env1_client = EtleapApi(env1_etleap_access_key, env1_etleap_secret_key, env1_base_url)
-pipelines = env1_client.get_pipelines()
+client = EtleapApi(etleap_access_key, etleap_secret_key, base_url)
+pipelines = client.get_pipelines()
 
 # Only flag pipelines for migration if they match the criteria above 
-from_env1 = [
+to_copy = [
     p for p in pipelines
     if (
         (sources_to_migrate and p.source['connectionId'] in sources_to_migrate)
@@ -52,7 +51,7 @@ from_env1 = [
     )
 ]
 
-for p in from_env1:
+for p in to_copy:
     if (p.destination['connectionId'] in connection_map.keys()):
         p.destination['connectionId'] = connection_map[p.destination['connectionId']]
     else: 
@@ -63,8 +62,8 @@ for p in from_env1:
         raise EtleapApiException(f"Pipeline \"{p.name}\" has a destination connection not in the connection map: {p.source['connectionId']}")  
 
 
-print(f"\n{len(from_env1)} pipeline(s) to be created in the target environment:")
-for p in from_env1:
+print(f"\n{len(to_copy)} pipeline(s) to be copied:")
+for p in to_copy:
     print(" -", p.name)
 
 proceed = input("\nProceed with creation? (y/n): ").strip().lower()
@@ -73,7 +72,7 @@ if proceed != 'y':
     exit(0)
 
 try:
-    for p in from_env1:
-        env1_client.create_pipeline(p, pipeline_name_suffix)
+    for p in to_copy:
+        client.create_pipeline(p, pipeline_name_suffix)
 except EtleapApiException as e:
     print(e.error_text)
