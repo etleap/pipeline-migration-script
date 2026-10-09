@@ -2,6 +2,9 @@ import requests as r
 
 BASE_URL = "https://api.etleap.com/api/v2"
 
+# Destination properties returned by GET that the API rejects on create (read-only)
+READ_ONLY_DESTINATION_FIELDS = ('schemaChangingTo', 'tableChangingTo')
+
 class EtleapApi:
 
     def __init__(self, access_key, secret_key, base_url = BASE_URL):
@@ -71,10 +74,10 @@ class Pipeline:
         self.api = api
         self.name = resp['name']
         self.source = resp['source']
-        self.destination = resp['destinations'][0]['destination']
+        self.destination = {k: v for k, v in resp['destinations'][0]['destination'].items() if k not in READ_ONLY_DESTINATION_FIELDS}
         self.latest_script_version = resp['latestScriptVersion']
         self.paused = resp['paused']
-        self.parsing_error_settings = resp.get('parsingErrorSettings', {}) # Address issue where parsingErrorSettings may not be present
+        self.row_error_settings = resp.get('rowErrorSettings') # Renamed from parsingErrorSettings; may not be present
         self.script = None
 
     def get_source_connection_id(self):
@@ -90,15 +93,17 @@ class Pipeline:
         return self.script
 
     def toJSON(self):
-        return {
+        body = {
             'name': self.name,
             'source': self.source,
             'destination': self.destination,
             'script': self.script,
             'paused': self.paused,
             'script': self.get_script(),
-            'parsingErrorSettings': self.parsing_error_settings
         }
+        if self.row_error_settings:
+            body['rowErrorSettings'] = self.row_error_settings
+        return body
 
 class EtleapApiException(Exception):
     def __init__(self, error_text):
