@@ -1,5 +1,10 @@
 from etleap.api import EtleapApi, EtleapApiException
 
+# Copies existing pipelines onto new source/destination connections within one Etleap environment.
+# Each copy keeps the original's script, paused state, row error settings, refresh schedule,
+# pipeline-level update schedule, and the users it is shared with.
+# Not copied (not exposed by the API): labels, and a "don't notify" row error setting.
+
 # API credentials
 
 base_url = "https://api.etleap.com/api/v2"
