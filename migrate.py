@@ -1,18 +1,29 @@
 from etleap.api import EtleapApi, EtleapApiException
 
-# Copies existing pipelines onto new source/destination connections within one Etleap environment.
+# Copies existing pipelines onto new source/destination connections, either within one Etleap
+# environment (the default) or into a separate Etleap deployment (set the target credentials below).
 # Each copy keeps the original's script, paused state, row error settings, refresh schedule,
-# pipeline-level update schedule, and the users it is shared with.
+# pipeline-level update schedule, and the users it is shared with (when those users exist in the target).
 # Not copied (not exposed by the API): labels, and a "don't notify" row error setting.
 
 # API credentials
+# This is where pipelines are read from
 
 base_url = "https://api.etleap.com/api/v2"
 etleap_access_key = '<api_access_key>'
 etleap_secret_key = '<api_secret_key>'
 
+# OPTIONAL: target deployment credentials
+# Fill these in only when migrating pipelines to a different Etleap deployment.
+# Leave the keys blank to create the copies in the same environment as above.
+
+target_base_url = "https://api.etleap.com/api/v2"
+target_etleap_access_key = ''
+target_etleap_secret_key = ''
+
 # Maps each current connection to the connection the copied pipelines should use
 # Update this as needed in the form of 'current_connection_id': 'new_connection_id'
+# When migrating to a different deployment, the new connection IDs are the ones in the target deployment
 # Every pipeline being copied must have both its source and destination connection in this map, otherwise the script stops with an error
 
 connection_map = {
@@ -47,6 +58,14 @@ pipeline_name_suffix =  ' - New'  # e.g., '_migrated' or ' (copy)'
 client = EtleapApi(etleap_access_key, etleap_secret_key, base_url)
 pipelines = client.get_pipelines()
 
+# Copies are created in the target deployment when its credentials are set, otherwise in the same environment
+if target_etleap_access_key and target_etleap_secret_key:
+    target_client = EtleapApi(target_etleap_access_key, target_etleap_secret_key, target_base_url)
+    print(f"\nCopies will be created in the target deployment: {target_base_url}")
+else:
+    target_client = client
+    print("\nCopies will be created in the same environment")
+
 # Only flag pipelines for migration if they match the criteria above 
 to_copy = [
     p for p in pipelines
@@ -78,6 +97,6 @@ if proceed != 'y':
 
 try:
     for p in to_copy:
-        client.create_pipeline(p, pipeline_name_suffix)
+        target_client.create_pipeline(p, pipeline_name_suffix)
 except EtleapApiException as e:
     print(e.error_text)

@@ -55,25 +55,23 @@ class EtleapApi:
 
     def copy_post_create_settings(self, original, created):
         # POST /pipelines ignores `shares` and does not accept `updateSchedule`, so both have
-        # to be applied with a PATCH once the pipeline exists. A PATCH that sets `shares` must
-        # include everyone who already has access (the creator), otherwise the API rejects it
-        # as an attempt to unshare.
-        updates = {}
+        # to be applied with a PATCH once the pipeline exists. They are sent as separate PATCHes
+        # because the API rejects the whole update if any part of it fails, and shares can
+        # legitimately fail when migrating to a deployment where those users don't exist.
+        if original.update_schedule:
+            self.update_pipeline(created['id'], original.name, 'update schedule', {'updateSchedule': original.update_schedule})
 
+        # A PATCH that sets `shares` must include everyone who already has access (the creator),
+        # otherwise the API rejects it as an attempt to unshare.
         existing_shares = created.get('shares') or []
         missing_shares = [s for s in original.shares if s not in existing_shares]
         if missing_shares:
-            updates['shares'] = existing_shares + missing_shares
+            self.update_pipeline(created['id'], original.name, 'shares', {'shares': existing_shares + missing_shares})
 
-        if original.update_schedule:
-            updates['updateSchedule'] = original.update_schedule
-
-        if not updates:
-            return
-
-        patch_resp = r.patch(self.base_url + '/pipelines/' + created['id'], auth=self.auth, json=updates)
+    def update_pipeline(self, pipeline_id, pipeline_name, what, updates):
+        patch_resp = r.patch(self.base_url + '/pipelines/' + pipeline_id, auth=self.auth, json=updates)
         if (patch_resp.status_code != 200):
-            print("Warning: pipeline " + original.name + " was created, but copying its shares/update schedule failed: " + patch_resp.text)
+            print("Warning: pipeline " + pipeline_name + " was created, but copying its " + what + " failed: " + patch_resp.text)
 
 class Pipeline:
 
