@@ -86,7 +86,8 @@ class Pipeline:
         self.row_error_settings = resp.get('rowErrorSettings') # Renamed from parsingErrorSettings; may not be present
         self.refresh_schedule = resp.get('refreshSchedule')
         self.update_schedule = resp.get('updateSchedule') # Only present when the pipeline overrides the connection's update schedule
-        self.shares = resp.get('shares') or [] # Emails of users with access, including the owner
+        self.shares = resp.get('shares') or [] # Emails of users the pipeline is shared with (the owner is not listed)
+        self.label = resp.get('label') # Only present when the pipeline has a label (API v2.13+)
         self.script = None
 
     def get_source_connection_id(self):
@@ -113,6 +114,8 @@ class Pipeline:
             body['rowErrorSettings'] = self.row_error_settings
         if self.refresh_schedule:
             body['refreshSchedule'] = self.refresh_schedule
+        if self.label:
+            body['label'] = self.label
         return body
 
 class EtleapApiException(Exception):

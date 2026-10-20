@@ -2,9 +2,9 @@ from etleap.api import EtleapApi, EtleapApiException
 
 # Copies existing pipelines onto new source/destination connections, either within one Etleap
 # environment (the default) or into a separate Etleap deployment (set the target credentials below).
-# Each copy keeps the original's script, paused state, row error settings, refresh schedule,
+# Each copy keeps the original's script, paused state, row error settings, refresh schedule, label,
 # pipeline-level update schedule, and the users it is shared with (when those users exist in the target).
-# Not copied (not exposed by the API): labels, and a "don't notify" row error setting.
+# Not copied (not exposed by the API): a "don't notify" row error setting.
 
 # API credentials
 # This is where pipelines are read from
