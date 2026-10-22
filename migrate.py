@@ -83,7 +83,7 @@ for p in to_copy:
     if (p.source['connectionId'] in connection_map.keys()):
         p.source['connectionId'] = connection_map[p.source['connectionId']]
     else: 
-        raise EtleapApiException(f"Pipeline \"{p.name}\" has a destination connection not in the connection map: {p.source['connectionId']}")  
+        raise EtleapApiException(f"Pipeline \"{p.name}\" has a source connection not in the connection map: {p.source['connectionId']}")
 
 
 print(f"\n{len(to_copy)} pipeline(s) to be copied:")
@@ -95,8 +95,20 @@ if proceed != 'y':
     print("Aborted.")
     exit(0)
 
-try:
-    for p in to_copy:
+# Keep going when one pipeline fails so the rest are still attempted, then summarize
+created = 0
+failed = []
+for p in to_copy:
+    original_name = p.name
+    try:
         target_client.create_pipeline(p, pipeline_name_suffix)
-except EtleapApiException as e:
-    print(e.error_text)
+        created += 1
+    except EtleapApiException as e:
+        print(e.error_text)
+        failed.append(original_name)
+
+print(f"\nDone. {created} of {len(to_copy)} pipeline(s) copied.")
+if failed:
+    print(f"Failed ({len(failed)}):")
+    for name in failed:
+        print(" -", name)
