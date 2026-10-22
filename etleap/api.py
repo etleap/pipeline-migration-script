@@ -81,6 +81,9 @@ class Pipeline:
         self.name = resp['name']
         self.source = resp['source']
         self.destination = {k: v for k, v in resp['destinations'][0]['destination'].items() if k not in READ_ONLY_DESTINATION_FIELDS}
+        if self.destination.get('type') == 'ICEBERG' and self.destination.get('table'):
+            # GET may return an Iceberg table name in uppercase, but create only accepts lowercase
+            self.destination['table'] = self.destination['table'].lower()
         self.latest_script_version = resp['latestScriptVersion']
         self.paused = resp['paused']
         self.row_error_settings = resp.get('rowErrorSettings') # Renamed from parsingErrorSettings; may not be present
