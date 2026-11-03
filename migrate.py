@@ -4,6 +4,8 @@ from etleap.api import EtleapApi, EtleapApiException
 # environment (the default) or into a separate Etleap deployment (set the target credentials below).
 # Each copy keeps the original's script, paused state, row error settings, refresh schedule, label,
 # pipeline-level update schedule, and the users it is shared with (when those users exist in the target).
+# The new destination connection can be a different type than the original (e.g. Redshift to Snowflake);
+# settings the new type doesn't support (e.g. Redshift sort columns) are dropped and listed before you confirm.
 # Not copied (not exposed by the API): a "don't notify" row error setting.
 
 # API credentials
@@ -51,6 +53,12 @@ sources_to_migrate = [
 
 pipeline_name_suffix =  ' - New'  # e.g., '_migrated' or ' (copy)'
 
+# Retain history setting for the copies: True turns it on, False turns it off, None keeps each original's setting
+# Only Redshift, Snowflake and Delta Lake destinations support retaining history
+# For CDC sources the copies use file_modification_time as the last-updated column, and it is added to the script if missing
+
+retain_history = None
+
 # -------------------------------------------
 # ------- DO NOT EDIT BELOW THIS LINE -------
 # -------------------------------------------
@@ -85,10 +93,28 @@ for p in to_copy:
     else: 
         raise EtleapApiException(f"Pipeline \"{p.name}\" has a source connection not in the connection map: {p.source['connectionId']}")
 
+# Match each copy's destination settings to the new destination's type (e.g. Redshift to Snowflake)
+notes = {}
+for p in to_copy:
+    original_type = p.destination['type']
+    destination_type = target_client.get_connection(p.destination['connectionId'])['type']
+    source_cdc_enabled = target_client.get_connection(p.source['connectionId']).get('cdcEnabled', False)
+    dropped = p.retarget(destination_type, source_cdc_enabled, retain_history)
+
+    pipeline_notes = []
+    if destination_type != original_type:
+        pipeline_notes.append(f"{original_type} -> {destination_type}")
+    if dropped:
+        pipeline_notes.append(f"drops settings {destination_type} does not support: {', '.join(dropped)}")
+    if p.destination.get('retainHistory'):
+        pipeline_notes.append("retains history")
+    if p.add_file_modification_time:
+        pipeline_notes.append("adds file_modification_time to the script if missing")
+    notes[p.id] = pipeline_notes
 
 print(f"\n{len(to_copy)} pipeline(s) to be copied:")
 for p in to_copy:
-    print(" -", p.name)
+    print(" -", p.name + (f" ({'; '.join(notes[p.id])})" if notes[p.id] else ''))
 
 proceed = input("\nProceed with creation? (y/n): ").strip().lower()
 if proceed != 'y':
